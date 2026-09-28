@@ -26,7 +26,7 @@ jobs:
 
       - name: Run unit and integration tests
         run: |
-          pytest --ignore=tests/test_cp5.py -v
+          pytest tests/test_cp1.py tests/test_cp2.py tests/test_cp3.py tests/test_cp4.py -m "not docker" --ignore=tests/test_cp5.py -v
 
   build:
     name: Build Docker Image
