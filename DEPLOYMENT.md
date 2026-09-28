@@ -18,7 +18,7 @@
 
 | Mục | Nội dung |
 |-----|----------|
-| Public URL | https://k4-l3a-day12-agent.up.railway.app |
+| Public URL | https://k4-l3a-day12-nguyenthehung-2a202602381-cloudserv-production.up.railway.app |
 | Platform | Railway |
 | Ngày deploy | 2026-09-28 |
 
