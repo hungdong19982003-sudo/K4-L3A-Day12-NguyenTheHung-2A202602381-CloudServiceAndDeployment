@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud AI Agent — Production Deployment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #090d16;
+      --bg-card: rgba(17, 24, 39, 0.85);
+      --bg-card-subtle: rgba(30, 41, 59, 0.7);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(56, 189, 248, 0.4);
+      --primary: #38bdf8;
+      --primary-gradient: linear-gradient(135deg, #0284c7, #2563eb);
+      --primary-hover: #0369a1;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --emerald: #10b981;
+      --emerald-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --rose: #f43f5e;
+      --rose-bg: rgba(244, 63, 94, 0.12);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-full: 9999px;
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-main);
+      background-image: 
+        radial-gradient(at 10% 15%, rgba(56, 189, 248, 0.08) 0px, transparent 50%),
+        radial-gradient(at 90% 85%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-wrapper {
+      width: 100%;
+      max-width: 860px;
+      height: calc(100vh - 32px);
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    /* Top Navigation */
+    header {
+      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 1px solid var(--border-card);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      background: var(--primary-gradient);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title h1 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title .version-badge {
+      font-size: 0.68rem;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .brand-title .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Status Pills */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      background: var(--emerald-bg);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-badge.standby {
+      background: var(--amber-bg);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .status-badge.error {
+      background: var(--rose-bg);
+      color: var(--rose);
+      border-color: rgba(244, 63, 94, 0.2);
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-settings {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text-main);
+      border: 1px solid var(--border-card);
+      padding: 6px 13px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-settings:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: var(--primary);
+    }
+
+    .btn-settings.has-key {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    /* Collapsible Config Drawer */
+    .config-drawer {
+      background: #0b1120;
+      border-bottom: 1px solid var(--border-card);
+      padding: 0 20px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+    }
+
+    .config-drawer.open {
+      max-height: 200px;
+      padding: 14px 20px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    @media (max-width: 640px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .config-item label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .config-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .config-input {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: #ffffff;
+      outline: none;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .config-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+
+    .btn-toggle-eye {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 4px;
+    }
+
+    .btn-save-config {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      height: 36px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn-save-config:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .config-hint {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* System Stats Strip */
+    .system-strip {
+      padding: 8px 20px;
+      background: rgba(15, 23, 42, 0.4);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .strip-items {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .strip-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .strip-item span.highlight {
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+
+    /* Chat Messages Viewport */
+    .chat-viewport {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-viewport::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-viewport::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    /* Message Bubbles */
+    .message-row {
+      display: flex;
+      gap: 12px;
+      max-width: 85%;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-row.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-row.bot {
+      align-self: flex-start;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .message-row.user .message-avatar {
+      background: #2563eb;
+    }
+
+    .message-row.bot .message-avatar {
+      background: #1e293b;
+      border: 1px solid var(--border-card);
+    }
+
+    .message-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius-lg);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .message-row.user .message-bubble {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+    }
+
+    .message-row.bot .message-bubble {
+      background: var(--bg-card-subtle);
+      color: #f1f5f9;
+      border: 1px solid var(--border-card);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-row.bot .message-bubble code {
+      background: rgba(15, 23, 42, 0.7);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .message-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      padding: 0 4px;
+      flex-wrap: wrap;
+    }
+
+    .meta-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Welcome Card */
+    .welcome-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px dashed rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      text-align: left;
+      margin-bottom: 8px;
+    }
+
+    .welcome-card h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .welcome-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .prompt-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .prompt-chip {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      font-size: 0.78rem;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .prompt-chip:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--primary);
+      color: #38bdf8;
+      transform: translateY(-1px);
+    }
+
+    /* Loading Pulse */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 18px;
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      width: fit-content;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: typingBounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Input Dock */
+    .input-dock {
+      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border-top: 1px solid var(--border-card);
+    }
+
+    .input-form {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 4px 6px 4px 14px;
+      transition: var(--transition);
+    }
+
+    .input-form:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 0.92rem;
+      font-family: inherit;
+      padding: 8px 0;
+    }
+
+    .chat-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .btn-clear {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: var(--transition);
+    }
+
+    .btn-clear:hover {
+      color: var(--rose);
+      background: var(--rose-bg);
+    }
+
+    .btn-send {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+
+    .btn-send:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 10px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header>
+      <div class="brand-section">
+        <div class="brand-logo">🤖</div>
+        <div class="brand-title">
+          <h1>
+            Cloud AI Agent
+            <span class="version-badge">v1.0.0</span>
+          </h1>
+          <span class="subtitle">Học viên: Nguyễn Thế Hùng (2A202602381) • Railway Cloud</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="status-badge" id="serviceBadge">
+          <span class="pulse-dot"></span>
+          <span id="serviceStatusText">Kiểm tra kết nối...</span>
+        </div>
+
+        <button class="btn-settings" id="toggleSettingsBtn" title="Cấu hình API Key & User ID">
+          <span>⚙️</span>
+          <span>Khóa API</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Config Drawer (Collapsible) -->
+    <div class="config-drawer" id="configDrawer">
+      <div class="config-grid">
+        <div class="config-item">
+          <label for="apiKeyInput">X-API-Key (Bảo mật Cloud)</label>
+          <div class="config-input-wrapper">
+            <input type="password" id="apiKeyInput" class="config-input" placeholder="Dán AGENT_API_KEY ở đây..." />
+            <button class="btn-toggle-eye" id="toggleEyeBtn" type="button" title="Ẩn/Hiện khóa">👁️</button>
+          </div>
+        </div>
+
+        <div class="config-item">
+          <label for="userIdInput">X-User-Id (Định danh người dùng)</label>
+          <input type="text" id="userIdInput" class="config-input" value="sv-test" placeholder="sv-test" />
+        </div>
+
+        <div class="config-item">
+          <button class="btn-save-config" id="saveConfigBtn" type="button">Lưu Cấu Hình</button>
+        </div>
+      </div>
+      <div class="config-hint">
+        <span>💡 Khóa API được lưu an toàn trong trình duyệt của bạn (localStorage).</span>
+        <span id="saveStatusNote"></span>
+      </div>
+    </div>
+
+    <!-- System Status Ribbon -->
+    <div class="system-strip">
+      <div class="strip-items">
+        <div class="strip-item">
+          <span>Liveness (/health):</span>
+          <span class="highlight" id="livenessStatus">200 OK</span>
+        </div>
+        <div class="strip-item">
+          <span>State (/ready):</span>
+          <span class="highlight" id="readinessStatus">Đang kiểm tra...</span>
+        </div>
+        <div class="strip-item">
+          <span>Độ trễ:</span>
+          <span class="highlight" id="latencyMetric">-- ms</span>
+        </div>
+      </div>
+      <div>
+        <span>Platform: <strong>Railway Production</strong></span>
+      </div>
+    </div>
+
+    <!-- Chat Messages Viewport -->
+    <div class="chat-viewport" id="chatViewport">
+      <!-- Welcome Message Card -->
+      <div class="welcome-card">
+        <h2>✨ Chào mừng đến với Cloud AI Agent!</h2>
+        <p>
+          Hệ thống AI Agent hỗ trợ hội thoại được triển khai chuẩn 12-Factor, lưu trạng thái Stateless với Redis, kiểm soát chi phí qua Cost Guard và bảo vệ bằng Rate Limiting. Bấm câu hỏi mẫu bên dưới hoặc gõ tin nhắn để bắt đầu:
+        </p>
+
+        <div class="prompt-suggestions">
+          <button class="prompt-chip" data-question="Docker multi-stage build là gì và vì sao nên dùng?">
+            🐳 Docker multi-stage là gì?
+          </button>
+          <button class="prompt-chip" data-question="Stateless và Stateful khác nhau thế nào trong Cloud?">
+            ⚡ Stateless vs Stateful?
+          </button>
+          <button class="prompt-chip" data-question="Rate Limiter và Cost Guard bảo vệ hệ thống thế nào?">
+            🛡️ Rate Limiter & Cost Guard?
+          </button>
+          <button class="prompt-chip" data-question="Kiến trúc 12-Factor App gồm những nguyên tắc nào?">
+            📐 12-Factor App là gì?
+          </button>
+          <button class="prompt-chip" data-question="Sự khác biệt giữa probe /health và /ready?">
+            🏥 /health vs /ready?
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Dock -->
+    <div class="input-dock">
+      <form class="input-form" id="chatForm">
+        <button type="button" class="btn-clear" id="clearBtn" title="Xóa lịch sử hội thoại">🗑️</button>
+        <input 
+          type="text" 
+          id="chatInput" 
+          class="chat-input" 
+          placeholder="Nhập câu hỏi của bạn (Enter để gửi)..." 
+          autocomplete="off"
+        />
+        <button type="submit" class="btn-send" id="sendBtn">
+          <span>Gửi</span>
+          <span>➔</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    Cloud Service & Deployment Lab • Nguyễn Thế Hùng (2A202602381) • Hosted on Railway
+  </footer>
+
+  <script>
+    // State management
+    const state = {
+      apiKey: localStorage.getItem("agent_api_key") || "",
+      userId: localStorage.getItem("agent_user_id") || "sv-test",
+      isProcessing: false,
+    };
+
+    // DOM Elements
+    const chatViewport = document.getElementById("chatViewport");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const configDrawer = document.getElementById("configDrawer");
+    const toggleSettingsBtn = document.getElementById("toggleSettingsBtn");
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const userIdInput = document.getElementById("userIdInput");
+    const saveConfigBtn = document.getElementById("saveConfigBtn");
+    const toggleEyeBtn = document.getElementById("toggleEyeBtn");
+    const saveStatusNote = document.getElementById("saveStatusNote");
+    const serviceBadge = document.getElementById("serviceBadge");
+    const serviceStatusText = document.getElementById("serviceStatusText");
+    const livenessStatus = document.getElementById("livenessStatus");
+    const readinessStatus = document.getElementById("readinessStatus");
+    const latencyMetric = document.getElementById("latencyMetric");
+
+    // Initialize UI
+    apiKeyInput.value = state.apiKey;
+    userIdInput.value = state.userId;
+    updateKeyBadge();
+
+    // Toggle Settings Drawer
+    toggleSettingsBtn.addEventListener("click", () => {
+      configDrawer.classList.toggle("open");
+    });
+
+    // Toggle Eye Visibility
+    toggleEyeBtn.addEventListener("click", () => {
+      const isPwd = apiKeyInput.type === "password";
+      apiKeyInput.type = isPwd ? "text" : "password";
+      toggleEyeBtn.textContent = isPwd ? "🙈" : "👁️";
+    });
+
+    // Save Configuration
+    saveConfigBtn.addEventListener("click", () => {
+      state.apiKey = apiKeyInput.value.trim();
+      state.userId = userIdInput.value.trim() || "sv-test";
+      localStorage.setItem("agent_api_key", state.apiKey);
+      localStorage.setItem("agent_user_id", state.userId);
+      updateKeyBadge();
+
+      saveStatusNote.textContent = "✅ Đã lưu cấu hình thành công!";
+      saveStatusNote.style.color = "#34d399";
+      setTimeout(() => {
+        saveStatusNote.textContent = "";
+        configDrawer.classList.remove("open");
+      }, 1200);
+    });
+
+    function updateKeyBadge() {
+      if (state.apiKey) {
+        toggleSettingsBtn.classList.add("has-key");
+        toggleSettingsBtn.innerHTML = `<span>🔑</span><span>Key: Đã lưu</span>`;
+      } else {
+        toggleSettingsBtn.classList.remove("has-key");
+        toggleSettingsBtn.innerHTML = `<span>⚙️</span><span>Nhập API Key</span>`;
+      }
+    }
+
+    // Health & Readiness Monitoring
+    async function checkHealth() {
+      const startTime = performance.now();
+      try {
+        const healthRes = await fetch("/health");
+        const elapsed = Math.round(performance.now() - startTime);
+        latencyMetric.textContent = `${elapsed} ms`;
+
+        if (healthRes.ok) {
+          serviceBadge.className = "status-badge";
+          serviceStatusText.textContent = "Service Online";
+          livenessStatus.textContent = "200 Healthy";
+          livenessStatus.style.color = "#34d399";
+        } else {
+          serviceBadge.className = "status-badge error";
+          serviceStatusText.textContent = "Shutting down";
+          livenessStatus.textContent = `${healthRes.status} Down`;
+          livenessStatus.style.color = "#f43f5e";
+        }
+      } catch (err) {
+        serviceBadge.className = "status-badge error";
+        serviceStatusText.textContent = "Offline";
+        livenessStatus.textContent = "Lỗi kết nối";
+        livenessStatus.style.color = "#f43f5e";
+      }
+
+      try {
+        const readyRes = await fetch("/ready");
+        if (readyRes.ok) {
+          readinessStatus.textContent = "Redis Ready (200)";
+          readinessStatus.style.color = "#34d399";
+        } else {
+          readinessStatus.textContent = `Redis Standby (${readyRes.status})`;
+          readinessStatus.style.color = "#f59e0b";
+        }
+      } catch (err) {
+        readinessStatus.textContent = "Không có Redis";
+        readinessStatus.style.color = "#f59e0b";
+      }
+    }
+
+    // Initial check & periodic polling
+    checkHealth();
+    setInterval(checkHealth, 15000);
+
+    // Send question handler
+    async function handleSend(questionText) {
+      const q = questionText || chatInput.value.trim();
+      if (!q || state.isProcessing) return;
+
+      // Append User message
+      appendMessage(q, "user");
+      chatInput.value = "";
+      state.isProcessing = true;
+      sendBtn.disabled = true;
+
+      // Show typing indicator
+      const loader = showTypingIndicator();
+
+      const startTime = performance.now();
+      try {
+        const headers = { "Content-Type": "application/json" };
+        if (state.apiKey) headers["X-API-Key"] = state.apiKey;
+        if (state.userId) headers["X-User-Id"] = state.userId;
+
+        const res = await fetch("/ask", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ question: q })
+        });
+
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+        loader.remove();
+
+        if (res.status === 200) {
+          const data = await res.json();
+          appendMessage(data.answer, "bot", {
+            tokens: `${data.tokens?.in || 0} in / ${data.tokens?.out || 0} out`,
+            cost: `$${(data.cost_usd || 0).toFixed(6)}`,
+            history: `${data.history_length || 0} tin trước`,
+            time: `${elapsed}s`
+          });
+        } else if (res.status === 401) {
+          appendMessage(
+            `🔒 **401 Unauthorized**: Bạn chưa cấu hình đúng **X-API-Key**.<br><br>` +
+            `👉 Hãy nhấn nút **Khóa API** ở góc phải trên cùng và dán giá trị <code>AGENT_API_KEY</code> vào rồi thử lại!`,
+            "bot",
+            null,
+            true
+          );
+          configDrawer.classList.add("open");
+        } else if (res.status === 429) {
+          appendMessage(
+            `⚠️ **429 Too Many Requests**: Bạn đã gọi quá nhanh (vượt ngưỡng Rate Limit cho phép mỗi phút). Vui lòng thử lại sau 1 phút.`,
+            "bot",
+            null,
+            true
+          );
+        } else if (res.status === 402) {
+          appendMessage(
+            `⛔ **402 Payment Required**: Đã vượt hạn mức ngân sách tháng của hệ thống (Cost Guard bảo vệ).`,
+            "bot",
+            null,
+            true
+          );
+        } else {
+          let errDetail = "Internal Error";
+          try {
+            const errData = await res.json();
+            errDetail = errData.detail || JSON.stringify(errData);
+          } catch(e) {
+            errDetail = await res.text();
+          }
+          appendMessage(`❌ **Lỗi (${res.status})**: ${errDetail}`, "bot", null, true);
+        }
+      } catch (err) {
+        loader.remove();
+        appendMessage(`⚠️ **Lỗi kết nối**: Không thể gửi yêu cầu tới máy chủ (${err.message}).`, "bot", null, true);
+      } finally {
+        state.isProcessing = false;
+        sendBtn.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    // Append Message to UI
+    function appendMessage(text, role, meta, isWarning) {
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = "message-avatar";
+      avatar.textContent = role === "user" ? "👤" : "🤖";
+
+      const content = document.createElement("div");
+      content.className = "message-content";
+
+      const bubble = document.createElement("div");
+      bubble.className = "message-bubble";
+      if (isWarning) {
+        bubble.style.border = "1px solid rgba(244, 63, 94, 0.3)";
+        bubble.style.background = "rgba(244, 63, 94, 0.08)";
+      }
+
+      // Simple markdown parser for bold and line breaks
+      bubble.innerHTML = formatMarkdown(text);
+      content.appendChild(bubble);
+
+      if (meta) {
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "message-meta";
+        metaDiv.innerHTML = `
+          <span class="meta-tag">⚡ ${meta.time}</span>
+          <span class="meta-tag">🔢 ${meta.tokens}</span>
+          <span class="meta-tag">💰 ${meta.cost}</span>
+          <span class="meta-tag">💬 ${meta.history}</span>
+        `;
+        content.appendChild(metaDiv);
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(content);
+      chatViewport.appendChild(row);
+      chatViewport.scrollTop = chatViewport.scrollHeight;
+      return row;
+    }
+
+    function formatMarkdown(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\n/g, "<br>");
+    }
+
+    // Typing Indicator
+    function showTypingIndicator() {
+      const row = document.createElement("div");
+      row.className = "message-row bot";
+
+      const avatar = document.createElement("div");
+      avatar.className = "message-avatar";
+      avatar.textContent = "🤖";
+
+      const indicator = document.createElement("div");
+      indicator.className = "typing-indicator";
+      indicator.innerHTML = `
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      `;
+
+      row.appendChild(avatar);
+      row.appendChild(indicator);
+      chatViewport.appendChild(row);
+      chatViewport.scrollTop = chatViewport.scrollHeight;
+      return row;
+    }
+
+    // Submit handler
+    chatForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      handleSend();
+    });
+
+    // Clear history
+    clearBtn.addEventListener("click", () => {
+      const messages = chatViewport.querySelectorAll(".message-row");
+      messages.forEach(m => m.remove());
+    });
+
+    // Click prompt chips
+    document.querySelectorAll(".prompt-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const q = chip.getAttribute("data-question");
+        handleSend(q);
+      });
+    });
+  </script>
+</body>
+</html>
